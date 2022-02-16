@@ -45,7 +45,7 @@ services:
     env_file: .env
     volumes:
       - ./vault/config:/vault/config
-      - ./seed-db:/tmp/seed-db
+      - ./postgres:/tmp/seed-db
       - ./vault/logs:/vault/logs
     networks:
       - internal

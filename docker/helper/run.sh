@@ -243,7 +243,7 @@ vault write -namespace=$ROOT_NAMESPACE/it database/$dataset/roles/dbadmin db_nam
 
 vault login -no-store -ns=$ROOT_NAMESPACE/it -method=userpass username=ubuntu password=$password -format=json > tmp/ubuntu-login.txt
 
-export UBUNTU_IP=$(getent hosts ubuntu | awk '{print $1}')
+UBUNTU_IP=$(getent hosts ubuntu | awk '{print $1}')
 
 #vault write -ns=$ROOT_NAMESPACE/it ssh/creds/otp_key_role ip=$UBUNTU_IP
 

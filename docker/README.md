@@ -22,6 +22,8 @@ Prerequisites
 
 1. Place unzipped Vault App for Splunk under `vault/vault-app-for-splunk`
 
+1. Place Vault Enterprise license under `vault/config` as vault.hclic.
+
 Usage
 ------------
 
