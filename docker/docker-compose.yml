@@ -1,0 +1,88 @@
+version: '3.8'
+
+networks:
+  internal:
+    driver: bridge
+    attachable: true
+    ipam:
+      driver: default
+      config:
+        - subnet: ${NWCIDRBLOCK}
+
+services:
+  vault-server:
+    depends_on:
+      - "splunk"
+    image: hashicorp/vault-enterprise
+    hostname: vault-server
+    container_name: vault-server
+    networks:
+      - internal
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_ADDR: "http://127.0.0.1:8200"
+      ROOT_NAMESPACE: ${ROOT_NAMESPACE}
+    restart: always
+    volumes:
+      - ./vault/data:/vault/file
+      - ./vault/config:/vault/config
+      - ./vault/logs:/vault/logs
+    cap_add:
+      - IPC_LOCK
+    entrypoint: vault server -config=/vault/config/config.hcl
+
+  helper:
+    depends_on: 
+      - "vault-server"
+    hostname: helper
+    container_name: helper
+    build: helper/.
+    stdin_open: true # docker run -i
+    tty: true
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    env_file: .env
+    volumes:
+      - ./vault/config:/vault/config
+      - ./seed-db:/tmp/seed-db
+      - ./vault/logs:/vault/logs
+    networks:
+      - internal
+
+  splunk:
+    networks:
+      - internal
+    image: splunk/splunk
+    hostname: splunk
+    container_name: splunk
+    volumes:
+      - './splunk/vault-app-for-splunk:/opt/splunk/etc/apps/vault'
+      - ./vault/logs:/vault/logs
+    environment:
+      - SPLUNK_USER:root
+      - SPLUNK_START_ARGS='--accept-license --answer-yes'
+      - SPLUNK_PASSWORD=${password}
+    ports:
+      - 8000:8000
+  postgres:
+    image: postgres
+    hostname: postgres
+    container_name: postgres
+    networks:
+      - internal
+    restart: always
+    env_file: .env #configure postgres
+    ports:
+      - '5432:5432'
+    volumes: 
+      - ./postgres:/tmp/seed-db:Z
+  ubuntu:
+    hostname: ubuntu
+    container_name: ubuntu
+    build: ubuntu-ssh/.
+    stdin_open: true 
+    tty: true
+    env_file: .env
+    networks:
+      - internal
