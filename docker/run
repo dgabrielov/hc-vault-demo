@@ -14,7 +14,7 @@ function compose_build() {
 }
 
 function compose_rebuild() {
-  docker-compose down -v --rmi all && docker-compose up -d
+  docker-compose down -v --rmi local && docker-compose up -d
 }
 
 for arg in "$@"
