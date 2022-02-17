@@ -25,9 +25,7 @@ services:
       ROOT_NAMESPACE: ${ROOT_NAMESPACE}
     restart: always
     volumes:
-      - ./vault/data:/vault/file
-      - ./vault/config:/vault/config
-      - ./vault/logs:/vault/logs
+      - ./vault:/vault
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config=/vault/config/config.hcl

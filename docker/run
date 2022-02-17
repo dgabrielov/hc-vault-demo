@@ -1,0 +1,40 @@
+#!/bin/bash
+
+function compose_destroy() {
+  docker-compose down -v --rmi local
+  find vault/data -mindepth 1 ! -name '*.md' -delete
+  find vault/logs -mindepth 1 ! -name '*.md' -delete
+  exit 0
+}
+trap cleanup SIGKILL SIGINT
+
+function compose_build() {
+  docker-compose up -d
+  exit 0
+}
+
+function compose_rebuild() {
+  docker-compose down -v --rmi all && docker-compose up -d
+}
+
+for arg in "$@"
+do
+    case $arg in
+        build)
+        compose_build
+        shift
+        ;;
+        destroy)
+        compose_destroy
+        shift
+        ;;
+        rebuild)
+        compose_rebuild
+        shift
+        ;;
+        *)
+        echo "Command not found: try 'build', 'destroy', or 'rebuild'"
+        shift
+        ;;
+    esac
+done

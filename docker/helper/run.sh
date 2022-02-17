@@ -84,7 +84,7 @@ vault login token=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token:
 echo "" > /vault/logs/vault_audit.log
 vault audit enable file file_path=/vault/logs/vault_audit.log
 vault namespace create $ROOT_NAMESPACE
-vault auth enable -namespace=$ROOT_NAMESPACE userpass
+vault auth enable -ns=$ROOT_NAMESPACE userpass
 
 # Superadmin can log into all namespaces incl $ROOT_NAMESPACE
 vault policy write -ns=$ROOT_NAMESPACE superadmin $POLICIESDIR/superadmin.hcl
@@ -99,15 +99,15 @@ sleep 5
 vault login -ns=$ROOT_NAMESPACE -method=userpass username=superadmin password=$password -format=json 2>/dev/null > tmp/superadmin-login.txt
 
 for namespace in ${namespaces[@]}; do
-  vault namespace create -namespace=$ROOT_NAMESPACE $namespace
-  vault auth enable -namespace=$ROOT_NAMESPACE/$namespace userpass
+  vault namespace create -ns=$ROOT_NAMESPACE $namespace
+  vault auth enable -ns=$ROOT_NAMESPACE/$namespace userpass
   vault policy write -ns=$ROOT_NAMESPACE/$namespace superadmin $POLICIESDIR/superadmin.hcl
   vault write -ns=$ROOT_NAMESPACE/$namespace auth/userpass/users/superadmin password=$password policies=superadmin
 done
 
 for role in ${itroles[@]}; do
-    vault policy write -namespace=$ROOT_NAMESPACE/it $role $POLICIESDIR/$role.hcl
-    vault write -namespace=$ROOT_NAMESPACE/it auth/userpass/users/$role password=$password policies=$role
+    vault policy write -ns=$ROOT_NAMESPACE/it $role $POLICIESDIR/$role.hcl
+    vault write -ns=$ROOT_NAMESPACE/it auth/userpass/users/$role password=$password policies=$role
     vault login -no-store -ns=$ROOT_NAMESPACE/it -method=userpass username=$role password=$password > tmp/$role-login.txt
 done
 
@@ -129,38 +129,38 @@ vault write -ns=$ROOT_NAMESPACE/finance auth/userpass/users/finuser password=$pa
 # GENERATE & PUT SECRETS
 
 # FINANCE SECTION
-vault secrets enable -namespace=$ROOT_NAMESPACE/finance -path="accounting" -version=1 kv
-vault kv put -namespace=$ROOT_NAMESPACE/finance accounting/QuickBooksOnline "FinanceUser"=`passgen`
+vault secrets enable -ns=$ROOT_NAMESPACE/finance -path="accounting" -version=1 kv
+vault kv put -ns=$ROOT_NAMESPACE/finance accounting/QuickBooksOnline "FinanceUser"=`passgen`
 
-vault secrets enable -namespace=$ROOT_NAMESPACE/people-ops -path="recruiting" -version=1 kv
-vault kv put -namespace=$ROOT_NAMESPACE/people-ops recruiting/LinkedInRecruiter "RecruitingUser"=`passgen`
-vault kv put -namespace=$ROOT_NAMESPACE/people-ops recruiting/Salesforce "RecruitingUser"=`passgen`
-vault secrets enable -namespace=$ROOT_NAMESPACE/people-ops -path="human-resources" -version=1 kv
-vault kv put -namespace=$ROOT_NAMESPACE/people-ops human-resources/Workday "HRUser"=`passgen`
-vault kv put -namespace=$ROOT_NAMESPACE/people-ops human-resources/ADP "HRUser"=`passgen`
+vault secrets enable -ns=$ROOT_NAMESPACE/people-ops -path="recruiting" -version=1 kv
+vault kv put -ns=$ROOT_NAMESPACE/people-ops recruiting/LinkedInRecruiter "RecruitingUser"=`passgen`
+vault kv put -ns=$ROOT_NAMESPACE/people-ops recruiting/Salesforce "RecruitingUser"=`passgen`
+vault secrets enable -ns=$ROOT_NAMESPACE/people-ops -path="human-resources" -version=1 kv
+vault kv put -ns=$ROOT_NAMESPACE/people-ops human-resources/Workday "HRUser"=`passgen`
+vault kv put -ns=$ROOT_NAMESPACE/people-ops human-resources/ADP "HRUser"=`passgen`
 
 
 # HELPDESK SECTION
-vault secrets enable -namespace=$ROOT_NAMESPACE/it -path="helpdesk" -version=2 kv
+vault secrets enable -ns=$ROOT_NAMESPACE/it -path="helpdesk" -version=2 kv
 for host in ${helpdeskhosts[@]}; do
-    vault kv put -namespace=$ROOT_NAMESPACE/it helpdesk/secrets/$host "HelpdeskUser"=`passgen`
+    vault kv put -ns=$ROOT_NAMESPACE/it helpdesk/secrets/$host "HelpdeskUser"=`passgen`
 done
 
 # INFOSEC SECTION
-vault secrets enable -namespace=$ROOT_NAMESPACE/it -path="infosec" -version=2 kv
+vault secrets enable -ns=$ROOT_NAMESPACE/it -path="infosec" -version=2 kv
 for app in ${infosecapps[@]}; do
-    vault kv put -namespace=$ROOT_NAMESPACE/it infosec/$app "InfoSecUser"=`passgen`
+    vault kv put -ns=$ROOT_NAMESPACE/it infosec/$app "InfoSecUser"=`passgen`
 done
 
 # INFRA SECTION
 
-vault secrets enable -namespace=$ROOT_NAMESPACE/it -path="infra" -version=2 kv
+vault secrets enable -ns=$ROOT_NAMESPACE/it -path="infra" -version=2 kv
 
-vault kv put -namespace=$ROOT_NAMESPACE/it "infra/${infra[0]}" "InfraUser"=`passgen`
-vault kv put -namespace=$ROOT_NAMESPACE/it "infra/${infra[1]}" "InfraUser"=`passgen`
-vault kv put -namespace=$ROOT_NAMESPACE/it "infra/${infra[2]}" "DOOR ACCESS CODE"="565023"
+vault kv put -ns=$ROOT_NAMESPACE/it "infra/${infra[0]}" "InfraUser"=`passgen`
+vault kv put -ns=$ROOT_NAMESPACE/it "infra/${infra[1]}" "InfraUser"=`passgen`
+vault kv put -ns=$ROOT_NAMESPACE/it "infra/${infra[2]}" "DOOR ACCESS CODE"="565023"
 
-vault secrets enable -namespace=$ROOT_NAMESPACE/it -path="database/$dataset" database
+vault secrets enable -ns=$ROOT_NAMESPACE/it -path="database/$dataset" database
 
 
 # Setup secrets-gen
@@ -226,13 +226,13 @@ ALTER ROLE dbadmin IN DATABASE $POSTGRES_DB set search_path TO $DB_SCHEMA;"
 # Configure the database secrets engine with the connection credentials for the Postgres database.
 # SSL disabled
 # not hardcoding credentials in connection_url
-vault write -namespace=$ROOT_NAMESPACE/it database/$dataset/config/$POSTGRES_DB plugin_name=postgresql-database-plugin allowed_roles="*" connection_url="postgres://{{username}}:{{password}}@postgres:5432/$POSTGRES_DB?sslmode=disable" username=$POSTGRES_USER password=$POSTGRES_PASSWORD
+vault write -ns=$ROOT_NAMESPACE/it database/$dataset/config/$POSTGRES_DB plugin_name=postgresql-database-plugin allowed_roles="*" connection_url="postgres://{{username}}:{{password}}@postgres:5432/$POSTGRES_DB?sslmode=disable" username=$POSTGRES_USER password=$POSTGRES_PASSWORD
 
 # Create Vault role "dbuser" that creates credentials
-vault write -namespace=$ROOT_NAMESPACE/it database/$dataset/roles/dbuser db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbuser TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
+vault write -ns=$ROOT_NAMESPACE/it database/$dataset/roles/dbuser db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbuser TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
 
 # Create Vault role "dbuser" that creates credentials
-vault write -namespace=$ROOT_NAMESPACE/it database/$dataset/roles/dbadmin db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbadmin TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
+vault write -ns=$ROOT_NAMESPACE/it database/$dataset/roles/dbadmin db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbadmin TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
 
 # Rotate root credentials
 #vault write -force database/$datasetrotate-root/$POSTGRES_DB

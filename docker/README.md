@@ -27,11 +27,31 @@ Prerequisites
 Usage
 ------------
 
-Helpful commands:
+There is a helper script called `run` in this directory. You can use this script to build and destroy the deployment.
+
+Start the docker-compose deployment:
+
+```bash
+./run build
+```
+
+Destroy:
+
+```bash
+./run destroy
+```
+
+Rebuild:
+
+```bash
+./run rebuild
+```
+
+Manual commands:
 
      docker-compose up -d
      docker-compose down -v --rmi [local, all]
-     docker-compose down -v --rmi [local, all] && docker-compose up -d 
+     docker-compose down -v --rmi [local, all] && docker-compose up -d
 
 MacOS/Docker Desktop Users:
 
