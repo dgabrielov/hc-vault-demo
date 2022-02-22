@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function compose_destroy() {
-  docker-compose down -v --rmi local
+  docker-compose -p=demo-vault-docker down -v --rmi local
   find vault/data -mindepth 1 ! -name '*.md' -delete
   find vault/logs -mindepth 1 ! -name '*.md' -delete
   exit 0
@@ -9,15 +9,15 @@ function compose_destroy() {
 trap cleanup SIGKILL SIGINT
 
 function compose_build() {
-  docker-compose up -d
+  docker-compose -p=demo-vault-docker up -d
   exit 0
 }
 
 function compose_rebuild() {
-  docker-compose down -v --rmi local 
+  docker-compose -p=demo-vault-docker down -v --rmi local 
   find vault/data -mindepth 1 ! -name '*.md' -delete
   find vault/logs -mindepth 1 ! -name '*.md' -delete
-  docker-compose up -d
+  docker-compose -p=demo-vault-docker up -d
 }
 
 for arg in "$@"
