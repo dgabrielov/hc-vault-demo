@@ -1,11 +1,9 @@
 #!/usr/bin/dumb-init /bin/bash
 
-sudo service ssh start
-
 # Generate config for vault-ssh-helper
 mkdir -p /etc/vault-ssh-helper.d/
 cat << EOF > /etc/vault-ssh-helper.d/config.hcl
-vault_addr = "http://vault-server:8200"
+vault_addr = "${VAULT_ADDR}"
 ssh_mount_point = "ssh"
 namespace = "$ROOT_NAMESPACE/it"
 tls_skip_verify = true
@@ -30,4 +28,3 @@ sudo service ssh start
 # TLS was disabled in Vault's config
 vault-ssh-helper -dev -config /etc/vault-ssh-helper.d/config.hcl
 
-tail -f /dev/null
