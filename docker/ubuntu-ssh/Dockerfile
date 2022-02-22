@@ -1,6 +1,6 @@
 FROM ubuntu:14.04
 
-# This is the release of Vault to pull in.
+# This is the release of Vault-SSH-Helper to pull in.
 ARG VSH_VERSION=0.2.1
 
 
