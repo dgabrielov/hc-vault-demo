@@ -1,5 +1,5 @@
 storage "file" {
-  path    = "vault/data"
+  path    = "vault/file"
 }
 
 listener "tcp" {
@@ -11,7 +11,7 @@ disable_mlock = true
 
 license_path = "vault/config/vault.hclic"
 
-plugin_directory = "vault/config/plugins"
+plugin_directory = "vault/plugins"
 
 api_addr = "http://0.0.0.0:8200"
 ui = true

@@ -172,7 +172,7 @@ rm -f ~/.vault-token
 
 vault login token=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
 
-SHA256=$(sha256sum "/vault/config/plugins/vault-secrets-gen" | cut -d ' ' -f1)
+SHA256=$(sha256sum "/vault/plugins/vault-secrets-gen" | cut -d ' ' -f1)
 
 vault plugin register -sha256="${SHA256}" -command="vault-secrets-gen" secret secrets-gen
 

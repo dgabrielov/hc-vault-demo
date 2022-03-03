@@ -24,28 +24,30 @@ services:
       VAULT_ADDR: "http://127.0.0.1:8200"
       ROOT_NAMESPACE: ${ROOT_NAMESPACE}
     volumes:
+      - ../assets/vault/policies:/vault/policies:ro
+      - ../assets/vault/config:/vault/config:ro
+      - ../assets/vault/plugins:/vault/plugins:ro
       - ./vault/data:/vault/file
-      - ./vault/config:/vault/config
       - ./vault/logs:/vault/logs
     cap_add:
       - IPC_LOCK
-    entrypoint: vault server -config=/vault/config/config.hcl
+    entrypoint: vault server -config=/vault/config/standalone.hcl
 
   helper:
     depends_on: 
       - "vault-server"
     hostname: helper
     container_name: helper
-    build: helper/.
+    build: ../assets/helper/.
     stdin_open: true # docker run -i
     tty: true
     environment:
       - PGPASSWORD=${POSTGRES_PASSWORD}
     env_file: .env
     volumes:
-      - ./vault/config:/vault/config
-      - ./postgres:/tmp/seed-db
-      - ./vault/logs:/vault/logs
+      - ../assets/vault:/vault
+      - ../assets/postgres:/tmp/seed-db
+      - ./vault/logs:/tmp/vault/logs
     networks:
       - internal
 
@@ -56,7 +58,7 @@ services:
     hostname: splunk
     container_name: splunk
     volumes:
-      - './splunk/vault-app-for-splunk:/opt/splunk/etc/apps/vault'
+      - ../assets/splunk/vault-app-for-splunk:/opt/splunk/etc/apps/vault
       - ./vault/logs:/vault/logs:ro
     environment:
       - SPLUNK_USER:root
@@ -75,12 +77,12 @@ services:
     ports:
       - '5432:5432'
     volumes: 
-      - ./postgres:/tmp/seed-db:Z
+      - ../assets/postgres:/tmp/seed-db:Z
 
   ubuntu:
     hostname: ubuntu
     container_name: ubuntu
-    build: ubuntu-ssh/.
+    build: ../assets/ubuntu-ssh/.
     stdin_open: true 
     tty: true
     env_file: .env
@@ -94,9 +96,7 @@ services:
     hostname: telegraf
     container_name: telegraf
     volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ../assets/telegraf/file_output.conf:/etc/telegraf/telegraf.conf:ro
       - ./vault/logs:/vault/logs
     ports:
       - 8125:8125/udp
-    environment:
-      - METRICS_HEC_TOKEN=${VAULT_METRICS_HEC_TOKEN}
