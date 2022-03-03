@@ -20,42 +20,29 @@ Prerequisites
 
 1. Change variables in .env from default values, if desired.
 
-1. Place unzipped Vault App for Splunk under `vault/vault-app-for-splunk`
+1. Place unzipped Vault App for Splunk under `assets/splunk/vault-app-for-splunk`
 
 1. Place Vault Enterprise license under `vault/config` as vault.hclic.
 
 Usage
 ------------
 
-There is a helper script called `run` in this directory. You can use this script to build and destroy the deployment.
+There is a helper script called `run` in this directory. You can use this script to build and destroy the deployment. Deployment architectures are available in single instance & clustered (coming soon) configurations.
 
 Start the docker-compose deployment:
 
 ```bash
-./run build
+./run build [single|cluster]
 ```
 
 Destroy:
 
 ```bash
-./run destroy
+./run destroy [single|cluster]
 ```
 
 Rebuild:
 
 ```bash
-./run rebuild
+./run rebuild [single|cluster]
 ```
-
-Manual commands:
-
-     docker-compose up -d
-     docker-compose down -v --rmi [local, all]
-     docker-compose down -v --rmi [local, all] && docker-compose up -d
-
-MacOS/Docker Desktop Users:
-
-    docker-compose -p=demo-vault-docker up -d 
-    docker-compose -p=demo-vault-docker down -v --rmi [local, all]
-    docker-compose -p=demo-vault-docker down -v --rmi [local,all] && docker-compose -p=demo-vault-docker up -d 
-
