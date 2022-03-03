@@ -47,7 +47,7 @@ services:
     volumes:
       - ../assets/vault:/vault
       - ../assets/postgres:/tmp/seed-db
-      - ./vault/logs:/tmp/vault/logs
+      - ./vault/logs:/vault/logs
     networks:
       - internal
 
