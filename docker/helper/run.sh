@@ -38,6 +38,9 @@ namespaces=(
   "people-ops"
 )
 
+echo "" > /vault/logs/vault_audit.log
+echo "" > /vault/logs/vault_metrics.log
+
 vault operator init > /tmp/vault-init-output.txt
 
 VAULT_TOKEN=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p')
@@ -81,7 +84,7 @@ esac
 # this issue: https://github.com/hashicorp/vault/issues/6501
 vault login token=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
 
-echo "" > /vault/logs/vault_audit.log
+
 vault audit enable file file_path=/vault/logs/vault_audit.log
 vault namespace create $ROOT_NAMESPACE
 vault auth enable -ns=$ROOT_NAMESPACE userpass
