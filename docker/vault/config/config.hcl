@@ -14,5 +14,11 @@ license_path = "vault/config/vault.hclic"
 plugin_directory = "vault/config/plugins"
 
 api_addr = "http://0.0.0.0:8200"
-cluster_addr = "http://127.0.0.1:8201"
 ui = true
+
+cluster_name = "vault-demo"
+telemetry {
+  dogstatsd_addr = "telegraf:8125"
+  enable_hostname_label = true
+  prometheus_retention_time = "0h"
+}
