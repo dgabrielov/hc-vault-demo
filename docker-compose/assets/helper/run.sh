@@ -38,15 +38,15 @@ namespaces=(
   "people-ops"
 )
 
-echo "" > /vault/logs/vault_audit.log
-echo "" > /vault/logs/vault_metrics.log
+echo "" > /tmp/outputs/vault_audit.log
+echo "" > /tmp/outputs/vault_metrics.log
 
-vault operator init > /tmp/vault-init-output.txt
+vault operator init > /tmp/outputs/vault-init-output.txt
 
-VAULT_TOKEN=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p')
+VAULT_TOKEN=$(cat /tmp/outputs/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p')
 
 IFS=$'\r\n' GLOBIGNORE='*' command eval \
-  "UNSEAL_KEYS=($(cat /tmp/vault-init-output.txt | grep '^Unseal' | rev | cut -d ' ' -f 1 | rev))"
+  "UNSEAL_KEYS=($(cat /tmp/outputs/vault-init-output.txt | grep '^Unseal' | rev | cut -d ' ' -f 1 | rev))"
 
 function vaultstatuscheck(){
         vault status | grep Sealed | awk '{print $2}'
@@ -82,10 +82,10 @@ esac
 
 # Using this method instead of $VAULT_TOKEN as per
 # this issue: https://github.com/hashicorp/vault/issues/6501
-vault login token=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
+vault login token=$(cat /tmp/outputs/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
 
 
-vault audit enable file file_path=/vault/logs/vault_audit.log
+vault audit enable file file_path=/tmp/outputs/vault_audit.log
 vault namespace create $ROOT_NAMESPACE
 vault auth enable -ns=$ROOT_NAMESPACE userpass
 
@@ -99,7 +99,7 @@ sleep 5
 
 # Generate superadmin token and continue script 
 # with this token
-vault login -ns=$ROOT_NAMESPACE -method=userpass username=superadmin password=$password -format=json 2>/dev/null > tmp/superadmin-login.txt
+vault login -ns=$ROOT_NAMESPACE -method=userpass username=superadmin password=$password -format=json 2>/dev/null > /tmp/outputs/superadmin-login.txt
 
 for namespace in ${namespaces[@]}; do
   vault namespace create -ns=$ROOT_NAMESPACE $namespace
@@ -111,11 +111,11 @@ done
 for role in ${itroles[@]}; do
     vault policy write -ns=$ROOT_NAMESPACE/it $role $POLICIESDIR/$role.hcl
     vault write -ns=$ROOT_NAMESPACE/it auth/userpass/users/$role password=$password policies=$role
-    vault login -no-store -ns=$ROOT_NAMESPACE/it -method=userpass username=$role password=$password > tmp/$role-login.txt
+    vault login -no-store -ns=$ROOT_NAMESPACE/it -method=userpass username=$role password=$password > /tmp/outputs/$role-login.txt
 done
 
 vault policy write -ns=$ROOT_NAMESPACE/it rotate-windows $POLICIESDIR/rotate-windows.hcl
-vault token create -ns=$ROOT_NAMESPACE/it -period 72h -policy rotate-windows > tmp/win-main-token.txt
+vault token create -ns=$ROOT_NAMESPACE/it -period 72h -policy rotate-windows > /tmp/outputs/win-main-token.txt
 
 
 # hruser - readonly within people-ops namespace
@@ -170,7 +170,7 @@ vault secrets enable -ns=$ROOT_NAMESPACE/it -path="database/$dataset" database
 # We must log in as the root user again to do this
 rm -f ~/.vault-token
 
-vault login token=$(cat /tmp/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
+vault login token=$(cat /tmp/outputs/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
 
 SHA256=$(sha256sum "/vault/plugins/vault-secrets-gen" | cut -d ' ' -f1)
 
@@ -180,7 +180,7 @@ vault secrets enable -ns=$ROOT_NAMESPACE/it -path="passgen" -plugin-name="secret
 
 rm -f ~/.vault-token
 
-vault login token=$(jq -r '.auth.client_token' tmp/superadmin-login.txt)
+vault login token=$(jq -r '.auth.client_token' /tmp/outputs/superadmin-login.txt)
 
 # create SSH Secret Engine
 vault secrets enable -ns=$ROOT_NAMESPACE/it ssh
@@ -244,7 +244,7 @@ vault write -ns=$ROOT_NAMESPACE/it database/$dataset/roles/dbadmin db_name=$POST
 
 # SSH OTP
 
-vault login -no-store -ns=$ROOT_NAMESPACE/it -method=userpass username=ubuntu password=$password -format=json > tmp/ubuntu-login.txt
+vault login -no-store -ns=$ROOT_NAMESPACE/it -method=userpass username=ubuntu password=$password -format=json > /tmp/outputs/ubuntu-login.txt
 
 UBUNTU_IP=$(getent hosts ubuntu | awk '{print $1}')
 

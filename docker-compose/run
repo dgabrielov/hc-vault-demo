@@ -7,15 +7,15 @@ function compose_destroy() {
     single)
       pushd standalone/
       docker-compose -p="$project_prefix-$1-instance" down -v --rmi local
-      find vault/data -mindepth 1 ! -name '*.md' -delete
-      find vault/logs -mindepth 1 ! -name '*.md' -delete
+      find vault/tmp -mindepth 1 ! -name '*.md' -delete
+      find vault/tmp -mindepth 1 ! -name '*.md' -delete
       popd
       ;;
     cluster)
       pushd cluster/
       docker-compose -p="$project_prefix-$1" down -v --rmi local
-      find vault/data -mindepth 1 ! -name '*.md' -delete
-      find vault/logs -mindepth 1 ! -name '*.md' -delete
+      find vault/tmp -mindepth 1 ! -name '*.md' -delete
+      find vault/tmp -mindepth 1 ! -name '*.md' -delete
       popd
       ;;
     *)

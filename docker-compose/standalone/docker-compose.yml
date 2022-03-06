@@ -27,8 +27,9 @@ services:
       - ../assets/vault/policies:/vault/policies:ro
       - ../assets/vault/config:/vault/config:ro
       - ../assets/vault/plugins:/vault/plugins:ro
-      - ./vault/data:/vault/file
-      - ./vault/logs:/vault/logs
+      - ./vault/tmp:/vault/file
+      - ./vault/tmp:/vault/logs
+      - ./vault/tmp:/tmp/outputs
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config=/vault/config/standalone.hcl
@@ -46,8 +47,8 @@ services:
     env_file: .env
     volumes:
       - ../assets/vault:/vault
-      - ../assets/postgres:/tmp/seed-db
-      - ./vault/logs:/vault/logs
+      - ../assets/postgres:/tmp/seed-db:ro
+      - ./vault/tmp:/tmp/outputs
     networks:
       - internal
 
@@ -59,13 +60,25 @@ services:
     container_name: splunk
     volumes:
       - ../assets/splunk/vault-app-for-splunk:/opt/splunk/etc/apps/vault
-      - ./vault/logs:/vault/logs:ro
+      - ./vault/tmp:/vault/logs:ro
     environment:
       - SPLUNK_USER:root
       - SPLUNK_START_ARGS='--accept-license --answer-yes'
       - SPLUNK_PASSWORD=${password}
     ports:
       - 8000:8000
+
+  telegraf:
+    networks:
+      - internal
+    image: telegraf
+    hostname: telegraf
+    container_name: telegraf
+    volumes:
+      - ../assets/telegraf/file_output.conf:/etc/telegraf/telegraf.conf:ro
+      - ./vault/tmp:/tmp/outputs
+    ports:
+      - 8125:8125/udp
 
   postgres:
     image: postgres
@@ -88,15 +101,3 @@ services:
     env_file: .env
     networks:
       - internal
-
-  telegraf:
-    networks:
-      - internal
-    image: telegraf
-    hostname: telegraf
-    container_name: telegraf
-    volumes:
-      - ../assets/telegraf/file_output.conf:/etc/telegraf/telegraf.conf:ro
-      - ./vault/logs:/vault/logs
-    ports:
-      - 8125:8125/udp
