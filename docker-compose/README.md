@@ -27,22 +27,22 @@ Prerequisites
 Usage
 ------------
 
-There is a helper script called `run` in this directory. You can use this script to build and destroy the deployment. Deployment architectures are available in single instance & clustered (coming soon) configurations.
+There are helper scripts in this directory which you can run to build and destroy the deployment. Deployment architectures are available in single instance & clustered (coming soon) configurations.
 
 Start the docker-compose deployment:
 
 ```bash
-./run build [single|cluster]
+./build [single|cluster]
 ```
 
 Destroy:
 
 ```bash
-./run destroy [single|cluster]
+./destroy [single|cluster]
 ```
 
 Rebuild:
 
 ```bash
-./run rebuild [single|cluster]
+./rebuild [single|cluster]
 ```
