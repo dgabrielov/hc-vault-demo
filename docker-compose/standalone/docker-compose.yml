@@ -13,13 +13,13 @@ services:
   vault-server:
     depends_on:
       - "splunk"
-    image: hashicorp/vault-enterprise
+    image: hashicorp/vault-enterprise:1.9-ent
     hostname: vault-server
     container_name: vault-server
     networks:
       - internal
     ports:
-      - "8200:8200"
+      - "18200:8200"
     environment:
       VAULT_ADDR: "http://127.0.0.1:8200"
       ROOT_NAMESPACE: ${ROOT_NAMESPACE}
@@ -27,9 +27,10 @@ services:
       - ../assets/vault/policies:/vault/policies:ro
       - ../assets/vault/config:/vault/config:ro
       - ../assets/vault/plugins:/vault/plugins:ro
-      - ./vault/tmp:/vault/file
       - ./vault/tmp:/vault/logs
       - ./vault/tmp:/tmp/outputs
+    tmpfs:
+      - /vault/file
     cap_add:
       - IPC_LOCK
     entrypoint: vault server -config=/vault/config/standalone.hcl
@@ -66,31 +67,31 @@ services:
       - SPLUNK_START_ARGS='--accept-license --answer-yes'
       - SPLUNK_PASSWORD=${password}
     ports:
-      - 8000:8000
+      - 18000:8000
 
   telegraf:
     networks:
       - internal
-    image: telegraf
+    image: telegraf:alpine
     hostname: telegraf
     container_name: telegraf
     volumes:
       - ../assets/telegraf/file_output.conf:/etc/telegraf/telegraf.conf:ro
       - ./vault/tmp:/tmp/outputs
     ports:
-      - 8125:8125/udp
+      - 18125:8125/udp
 
   postgres:
-    image: postgres
+    image: postgres:11-alpine
     hostname: postgres
     container_name: postgres
     networks:
       - internal
     env_file: .env #configure postgres
     ports:
-      - '5432:5432'
+      - '15432:5432'
     volumes: 
-      - ../assets/postgres:/tmp/seed-db:Z
+      - ../assets/postgres:/tmp/seed-db:ro
 
   ubuntu:
     hostname: ubuntu
