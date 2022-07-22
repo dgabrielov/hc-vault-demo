@@ -10,6 +10,7 @@ This demo showcases the following Vault use cases:
 
 * Multi-Tenancy (Namespaces, Policies)
 * Dynamic Database Credentials (PostgreSQL)
+* MFA (Login & TOTP)
 * One Time Passwords (SSH)
 * Static Secrets (Simple KV)
 * Secrets Versioning (KV v2)
@@ -27,22 +28,10 @@ Prerequisites
 Usage
 ------------
 
-There are helper scripts in this directory which you can run to build and destroy the deployment. Deployment architectures are available in single instance & clustered (coming soon) configurations.
+There is a helper script in this directory which you can run to build and destroy the deployment.
 
-Start the docker-compose deployment:
-
-```bash
-./build [single|cluster]
-```
-
-Destroy:
+Start or destroy the deployment:
 
 ```bash
-./destroy [single|cluster]
-```
-
-Rebuild:
-
-```bash
-./rebuild [single|cluster]
+./demo [build|destroy]
 ```

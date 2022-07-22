@@ -1,0 +1,48 @@
+#!/bin/bash
+
+project_prefix=hc-vault-demo
+
+
+dockerfiles=$(find . -name '*Dockerfile')
+
+docker_image_build (){
+  for i in ${dockerfiles[@]}; do
+    pushd $(dirname $i) 1> /dev/null
+    docker build . -t vaultdemo-${PWD##*/}:latest
+    popd 1> /dev/null
+  done
+}
+
+docker_image_rm () {
+  for i in ${dockerfiles[@]}; do
+    pushd $(dirname $i) 1> /dev/null
+    docker image rm vaultdemo-${PWD##*/}:latest
+    popd 1> /dev/null
+  done
+}
+
+case "$1" in
+    build)
+      docker_image_build
+      pushd standalone/
+      docker-compose -p="$project_prefix" up -d
+      popd
+      ;;
+    destroy)
+      pushd standalone/
+      docker-compose -p="$project_prefix" down -v 
+      find vault/tmp -mindepth 1 ! -name '*.md' -delete
+      find vault/tmp -mindepth 1 ! -name '*.md' -delete
+      popd
+      docker_image_rm
+      # another way to remove images (lazy)
+      #docker images -a | grep "vaultdemo-*" | awk '{print $3}' | xargs docker rmi
+      ;;
+    *)
+      printf "\n%s" \
+      "Creates the Vault deployment based on size desired." \
+      "Usage: $script_name [build | destroy]" \
+      "" \
+      ""
+      ;;
+esac

@@ -11,11 +11,11 @@ networks:
 
 services:
   vault-server:
-    depends_on:
-      - "splunk"
-    image: hashicorp/vault-enterprise:1.9-ent
+    image: hashicorp/vault-enterprise:1.10.4-ent
     hostname: vault-server
     container_name: vault-server
+    depends_on:
+      - splunk
     networks:
       - internal
     ports:
@@ -36,11 +36,12 @@ services:
     entrypoint: vault server -config=/vault/config/standalone.hcl
 
   helper:
-    depends_on: 
-      - "vault-server"
     hostname: helper
     container_name: helper
-    build: ../assets/helper/.
+    depends_on:
+      - vault-server
+    #build: ../assets/helper/.
+    image: vaultdemo-helper:latest
     stdin_open: true # docker run -i
     tty: true
     environment:
@@ -49,6 +50,24 @@ services:
     volumes:
       - ../assets/vault:/vault
       - ../assets/postgres:/tmp/seed-db:ro
+      - ./vault/tmp:/tmp/outputs
+    networks:
+      - internal
+
+  helper-mfa:
+    hostname: helper-mfa
+    container_name: helper-mfa
+    depends_on:
+      - vault-server
+    #build: ../assets/helper/.
+    image: vaultdemo-helper-mfa:latest
+    stdin_open: true # docker run -i
+    tty: true
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    env_file: .env
+    volumes:
+      - ../assets/vault:/vault:ro
       - ./vault/tmp:/tmp/outputs
     networks:
       - internal
@@ -96,7 +115,19 @@ services:
   ubuntu:
     hostname: ubuntu
     container_name: ubuntu
-    build: ../assets/ubuntu-ssh/.
+    #build: ../assets/ubuntu-ssh/.
+    image: vaultdemo-ubuntu-ssh:latest
+    stdin_open: true 
+    tty: true
+    env_file: .env
+    networks:
+      - internal
+
+  centos:
+    hostname: centos
+    container_name: centos
+    #build: ../assets/ubuntu-ssh/.
+    image: centos:centos7.9.2009
     stdin_open: true 
     tty: true
     env_file: .env
