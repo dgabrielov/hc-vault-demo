@@ -1,5 +1,9 @@
 #!/usr/bin/dumb-init /bin/bash
 
+mfaroles=(
+    "mfauser"
+)
+
 function vaultstatuscheck(){
         vault status | grep Sealed | awk '{print $2}'
 }
@@ -33,6 +37,19 @@ sleep 15
 # this issue: https://github.com/hashicorp/vault/issues/6501
 vault login token=$(cat /tmp/outputs/vault-init-output.txt | sed -n -e 's/^.*Root Token: //p') >/dev/null
 
+
+for role in ${mfaroles[@]}; do
+    vault policy write -ns=it-mfa $role $POLICIESDIR/$role.hcl
+    vault write -ns=it-mfa auth/userpass/users/$role password=$password policies=$role
+    vault login -no-store -ns=it-mfa -method=userpass username=$role password=$password -format=json> /tmp/outputs/$role-login2.txt
+done
+
+# HELPDESK SECTION
+vault secrets enable -ns=it-mfa -path="topsecret" -version=2 kv
+for host in ${helpdeskhosts[@]}; do
+    vault kv put -ns=it-mfa topsecret/secrets/$host "SecretUsername"=`passgen`
+done
+
 # Configure MFA TOTP
 # Must be done at the root namespace
 
@@ -50,12 +67,12 @@ echo "step-up MFA: data:image/png;base64,$MFAUSER_BARCODE"
 
 
 ## vault login -method=userpass username=mfauser
-## vault kv get -ns=it helpdesk/secrets/macos-hosts (permission denied)
-## vault kv get -mfa mfa:959525 -ns=it helpdesk/secrets/macos-hosts (working)
+## vault kv get -ns=it-mfa helpdesk/secrets/macos-hosts (permission denied)
+## vault kv get -mfa mfa:959525 -ns=it-mfa helpdesk/secrets/macos-hosts (working)
 
 ### 
 
-LOGIN_MFA_METHOD_ID=$(vault write -ns=it /identity/mfa/method/totp \
+LOGIN_MFA_METHOD_ID=$(vault write -ns=it-mfa /identity/mfa/method/totp \
     -format=json \
     generate=true \
     issuer=Vault-LoginMFA \
@@ -64,20 +81,20 @@ LOGIN_MFA_METHOD_ID=$(vault write -ns=it /identity/mfa/method/totp \
     algorithm=SHA256 \
     digits=6 | jq -r '.data.method_id')
 
-export LOGIN_MFA_BARCODE=$(vault write -ns=it /identity/mfa/method/totp/admin-generate -format=json \
-                        method_id=$LOGIN_MFA_METHOD_ID entity_id=$(cat /tmp/outputs/helpdesk-login.txt | jq -r '.auth.entity_id') | jq -r '.data.barcode')
+export LOGIN_MFA_BARCODE=$(vault write -ns=it-mfa /identity/mfa/method/totp/admin-generate -format=json \
+                        method_id=$LOGIN_MFA_METHOD_ID entity_id=$(cat /tmp/outputs/mfauser-login2.txt | jq -r '.auth.entity_id') | jq -r '.data.barcode')
 
 
 echo "login MFA: data:image/png;base64,$LOGIN_MFA_BARCODE"
 
-USERPASS_ACCESSOR=$(vault auth list -ns=it -format=json -detailed | jq -r '."userpass/".accessor')
+USERPASS_ACCESSOR=$(vault auth list -ns=it-mfa -format=json -detailed | jq -r '."userpass/".accessor')
 
-vault write -ns=it /identity/mfa/login-enforcement/totp \
+vault write -ns=it-mfa /identity/mfa/login-enforcement/totp \
     mfa_method_ids="$LOGIN_MFA_METHOD_ID" \
     auth_method_accessors=$USERPASS_ACCESSOR
 
 
-## vault login -ns=it -method=userpass username=helpdesk
-    ## vault kv get -ns=it helpdesk/secrets/macos-hosts
+## vault login -ns=it-mfa -method=userpass username=helpdesk
+    ## vault kv get -ns=it-mfa helpdesk/secrets/macos-hosts
 
 tail -f dev/null

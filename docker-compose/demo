@@ -30,7 +30,7 @@ case "$1" in
       ;;
     destroy)
       pushd standalone/
-      docker-compose -p="$project_prefix" down -v 
+      docker-compose -p="$project_prefix" down -v --rmi all
       find vault/tmp -mindepth 1 ! -name '*.md' -delete
       find vault/tmp -mindepth 1 ! -name '*.md' -delete
       popd

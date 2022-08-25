@@ -9,6 +9,7 @@ infosecapps=(
     "nessus"
     "splunk"
     "carbonblack"
+    "checkmarx"
 )
 
 infra=(
@@ -35,8 +36,8 @@ itroles=(
 namespaces=(
   "finance"
   "it"
+  "it-mfa"
   "hr"
-  "topsecret"
 )
 
 echo "" > /tmp/outputs/vault_audit.log
@@ -112,64 +113,70 @@ for namespace in ${namespaces[@]}; do
   vault write -ns=$namespace auth/userpass/users/superadmin password=$password policies=superadmin
 done
 
+export VAULT_NAMESPACE=it
+
 for role in ${itroles[@]}; do
-    vault policy write -ns=it $role $POLICIESDIR/$role.hcl
-    vault write -ns=it auth/userpass/users/$role password=$password policies=$role
-    vault login -no-store -ns=it -method=userpass username=$role password=$password -format=json> /tmp/outputs/$role-login.txt
+    vault policy write $role $POLICIESDIR/$role.hcl
+    vault write auth/userpass/users/$role password=$password policies=$role
+    vault login -no-store -method=userpass username=$role password=$password -format=json> /tmp/outputs/$role-login.txt
 done
 
-vault policy write -ns=it rotate-windows $POLICIESDIR/rotate-windows.hcl
-vault token create -ns=it -period 72h -policy rotate-windows > /tmp/outputs/win-main-token.txt
+vault policy write rotate-windows $POLICIESDIR/rotate-windows.hcl
+vault token create -period 72h -policy rotate-windows > /tmp/outputs/win-main-token.txt
 
+export VAULT_NAMESPACE=hr
 
 # hruser - readonly within hr namespace
-vault policy write -ns=hr hruser $POLICIESDIR/hruser.hcl
-vault write -ns=hr auth/userpass/users/hruser password=$password policies=hruser
-vault login -no-store -ns=hr -method=userpass username=hruser password=$password -format=json > /tmp/outputs/hruser-login.txt
+vault policy write hruser $POLICIESDIR/hruser.hcl
+vault write auth/userpass/users/hruser password=$password policies=hruser
+vault login -no-store -method=userpass username=hruser password=$password -format=json > /tmp/outputs/hruser-login.txt
 
-
+export VAULT_NAMESPACE=finance
 # finuser - readonly within finance namespace
-vault policy write -ns=finance finuser $POLICIESDIR/finuser.hcl
-vault write -ns=finance auth/userpass/users/finuser password=$password policies=finuser
+vault policy write finuser $POLICIESDIR/finuser.hcl
+vault write auth/userpass/users/finuser password=$password policies=finuser
 
 
 
 # GENERATE & PUT SECRETS
 
 # FINANCE SECTION
-vault secrets enable -ns=finance -path="accounting" -version=1 kv
-vault kv put -ns=finance accounting/QuickBooksOnline "FinanceUser"=`passgen`
+vault secrets enable -path="accounting" -version=1 kv
+vault kv put accounting/QuickBooksOnline "FinanceUser"=`passgen`
 
-vault secrets enable -ns=hr -path="recruiting" -version=1 kv
-vault kv put -ns=hr recruiting/LinkedInRecruiter "RecruitingUser"=`passgen`
-vault kv put -ns=hr recruiting/Salesforce "RecruitingUser"=`passgen`
-vault secrets enable -ns=hr -path="human-resources" -version=1 kv
-vault kv put -ns=hr human-resources/Workday "HRUser"=`passgen`
-vault kv put -ns=hr human-resources/ADP "HRUser"=`passgen`
+export VAULT_NAMESPACE=hr
+vault secrets enable -path="recruiting" -version=1 kv
+vault kv put recruiting/LinkedInRecruiter "RecruitingUser"=`passgen`
+vault kv put recruiting/Salesforce "RecruitingUser"=`passgen`
+vault secrets enable -path="human-resources" -version=1 kv
+vault kv put human-resources/Workday "HRUser"=`passgen`
+vault kv put human-resources/ADP "HRUser"=`passgen`
 
-
+export VAULT_NAMESPACE=it
 # HELPDESK SECTION
-vault secrets enable -ns=it -path="helpdesk" -version=2 kv
+vault secrets enable -path="helpdesk" -version=2 kv
 for host in ${helpdeskhosts[@]}; do
-    vault kv put -ns=it helpdesk/secrets/$host "HelpdeskUser"=`passgen`
+    vault kv put helpdesk/$host Username="Helpdesk" Password=`passgen` 
 done
 
 # INFOSEC SECTION
-vault secrets enable -ns=it -path="infosec" -version=2 kv
+vault secrets enable -path="infosec" -version=2 kv
 for app in ${infosecapps[@]}; do
-    vault kv put -ns=it infosec/$app "InfoSecUser"=`passgen`
+    vault kv put infosec/$app Username="${app}" Password=`passgen` 
 done
+
 
 # INFRA SECTION
 
-vault secrets enable -ns=it -path="infra" -version=2 kv
+vault secrets enable -path="infra" -version=2 kv
 
-vault kv put -ns=it "infra/${infra[0]}" "InfraUser"=`passgen`
-vault kv put -ns=it "infra/${infra[1]}" "InfraUser"=`passgen`
-vault kv put -ns=it "infra/${infra[2]}" "DOOR ACCESS CODE"="565023"
+vault kv put "infra/${infra[0]}" "InfraUser"=`passgen`
+vault kv put "infra/${infra[1]}" "InfraUser"=`passgen`
+vault kv put "infra/${infra[2]}" "DOOR ACCESS CODE"="565023"
 
-vault secrets enable -ns=it -path="database/$dataset" database
+vault secrets enable -path="database/$dataset" database
 
+unset VAULT_NAMESPACE
 
 # Setup secrets-gen
 # We must log in as the root user again to do this
@@ -181,27 +188,28 @@ SHA256=$(sha256sum "/vault/plugins/vault-secrets-gen" | cut -d ' ' -f1)
 
 vault plugin register -sha256="${SHA256}" -command="vault-secrets-gen" secret secrets-gen
 
-vault secrets enable -ns=it -path="passgen" -plugin-name="secrets-gen" plugin
+vault secrets enable -path="passgen" -plugin-name="secrets-gen" plugin
 
 
 rm -f ~/.vault-token
 
 vault login token=$(jq -r '.auth.client_token' /tmp/outputs/superadmin-login.txt)
 
+export VAULT_NAMESPACE=it
 # create SSH Secret Engine
-vault secrets enable -ns=it ssh
-vault policy write -ns=it ssh-otp $POLICIESDIR/ssh-otp.hcl
-vault write -ns=it auth/userpass/users/ubuntu password=$password policies=ssh-otp
+vault secrets enable ssh
+vault policy write ssh-otp $POLICIESDIR/ssh-otp.hcl
+vault write auth/userpass/users/ubuntu password=$password policies=ssh-otp
 
 # create role for engine
-vault write -ns=it ssh/roles/otp_key_role \
+vault write ssh/roles/otp_key_role \
 key_type=otp \
 default_user=ubuntu \
 cidr_list=$NWCIDRBLOCK
 
 export UBUNTU_IP=$(getent hosts ubuntu | awk '{print $1}')
 
-vault write -ns=it ssh/creds/otp_key_role ip=$UBUNTU_IP
+vault write ssh/creds/otp_key_role ip=$UBUNTU_IP
 
 # CONFIGURE POSTGRES
 
@@ -235,13 +243,13 @@ ALTER ROLE dbadmin IN DATABASE $POSTGRES_DB set search_path TO $DB_SCHEMA;"
 # Configure the database secrets engine with the connection credentials for the Postgres database.
 # SSL disabled
 # not hardcoding credentials in connection_url
-vault write -ns=it database/$dataset/config/$POSTGRES_DB plugin_name=postgresql-database-plugin allowed_roles="*" connection_url="postgres://{{username}}:{{password}}@postgres:5432/$POSTGRES_DB?sslmode=disable" username=$POSTGRES_USER password=$POSTGRES_PASSWORD
+vault write database/$dataset/config/$POSTGRES_DB plugin_name=postgresql-database-plugin allowed_roles="*" connection_url="postgres://{{username}}:{{password}}@postgres:5432/$POSTGRES_DB?sslmode=disable" username=$POSTGRES_USER password=$POSTGRES_PASSWORD
 
 # Create Vault role "dbuser" that creates credentials
-vault write -ns=it database/$dataset/roles/dbuser db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbuser TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
+vault write database/$dataset/roles/dbuser db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbuser TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
 
 # Create Vault role "dbuser" that creates credentials
-vault write -ns=it database/$dataset/roles/dbadmin db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbadmin TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
+vault write database/$dataset/roles/dbadmin db_name=$POSTGRES_DB creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT; GRANT dbadmin TO \"{{name}}\";" default_ttl="30m" max_ttl="24h"
 
 # Rotate root credentials
 #vault write -force database/$datasetrotate-root/$POSTGRES_DB
@@ -250,12 +258,12 @@ vault write -ns=it database/$dataset/roles/dbadmin db_name=$POSTGRES_DB creation
 
 # SSH OTP
 
-vault login -no-store -ns=it -method=userpass username=ubuntu password=$password -format=json > /tmp/outputs/ubuntu-login.txt
+vault login -no-store -method=userpass username=ubuntu password=$password -format=json > /tmp/outputs/ubuntu-login.txt
 
 UBUNTU_IP=$(getent hosts ubuntu | awk '{print $1}')
 
-#vault write -ns=it ssh/creds/otp_key_role ip=$UBUNTU_IP
+#vault write ssh/creds/otp_key_role ip=$UBUNTU_IP
 
-echo "Enter this command: vault ssh -ns=it -role otp_key_role -mode otp -strict-host-key-checking=no ubuntu@$UBUNTU_IP"
+echo "Enter this command: vault ssh -role otp_key_role -mode otp -strict-host-key-checking=no ubuntu@$UBUNTU_IP"
 
 tail -f dev/null

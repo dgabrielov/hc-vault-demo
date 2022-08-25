@@ -72,6 +72,25 @@ services:
     networks:
       - internal
 
+  helper-approle:
+    hostname: helper-approle
+    container_name: helper-approle
+    depends_on:
+      - vault-server
+    #build: ../assets/helper/.
+    image: vaultdemo-helper-approle:latest
+    stdin_open: true # docker run -i
+    tty: true
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    env_file: .env
+    volumes:
+      - ../assets/vault:/vault:ro
+      - ../assets/helper-approle/scripts:/tmp/scripts
+      - ./vault/tmp:/tmp/outputs:ro
+    networks:
+      - internal
+
   splunk:
     networks:
       - internal
