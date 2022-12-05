@@ -5,7 +5,7 @@ mkdir -p /etc/vault-ssh-helper.d/
 cat << EOF > /etc/vault-ssh-helper.d/config.hcl
 vault_addr = "${VAULT_ADDR}"
 ssh_mount_point = "ssh"
-namespace = "$ROOT_NAMESPACE/it"
+namespace = "it"
 tls_skip_verify = true
 allowed_roles = "*"
 allowed_cidr_list="${NWCIDRBLOCK}"
