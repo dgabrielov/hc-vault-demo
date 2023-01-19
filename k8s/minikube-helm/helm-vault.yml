@@ -1,0 +1,274 @@
+
+global:
+  tlsDisable: true
+
+injector:
+  # True if you want to enable vault agent injection.
+  # @default: global.enabled
+  enabled: false
+
+ui:
+  enabled: true
+  publishNotReadyAddresses: false
+  activeVaultPodOnly: true
+  serviceType: "LoadBalancer"
+  serviceNodePort: null
+  externalPort: 18200
+
+  # The externalTrafficPolicy can be set to either Cluster or Local
+  # and is only valid for LoadBalancer and NodePort service types.
+  # The default value is Cluster.
+  # ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
+  externalTrafficPolicy: Cluster
+
+server:
+  # If true, or "-" with global.enabled true, Vault server will be installed.
+  # See vault.mode in _helpers.tpl for implementation details.
+  enabled: true
+
+  # [Enterprise Only] This value refers to a Kubernetes secret that you have
+  # created that contains your enterprise license. If you are not using an
+  # enterprise image or if you plan to introduce the license key via another
+  # route, then leave secretName blank ("") or set it to null.
+  # Requires Vault Enterprise 1.8 or later.
+  enterpriseLicense:
+    # The name of the Kubernetes secret that holds the enterprise license. The
+    # secret must be in the same namespace that Vault is installed into.
+    secretName: "vault-ent-license"
+    # The key within the Kubernetes secret that holds the enterprise license.
+    secretKey: "license.hclic"
+
+  # Resource requests, limits, etc. for the server cluster placement. This
+  # should map directly to the value of the resources field for a PodSpec.
+  # By default no direct resource request is made.
+
+  image:
+    repository: "hashicorp/vault-enterprise"
+    tag: "1.10.4-ent"
+    # Overrides the default Image Pull Policy
+    pullPolicy: IfNotPresent
+
+
+
+  resources: {}
+  # resources:
+  #   requests:
+  #     memory: 256Mi
+  #     cpu: 250m
+  #   limits:
+  #     memory: 256Mi
+  #     cpu: 250m
+
+
+  # Used to define custom readinessProbe settings
+  readinessProbe:
+    enabled: false
+    # If you need to use a http path instead of the default exec
+    path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+
+    # When a probe fails, Kubernetes will try failureThreshold times before giving up
+    #failureThreshold: 2
+    # Number of seconds after the container has started before probe initiates
+    initialDelaySeconds: 90
+    # How often (in seconds) to perform the probe
+    #periodSeconds: 5
+    # Minimum consecutive successes for the probe to be considered successful after having failed
+    #successThreshold: 1
+    # Number of seconds after which the probe times out.
+    #timeoutSeconds: 5
+  # Used to enable a livenessProbe for the pods
+  livenessProbe:
+    enabled: false
+    path: "/v1/sys/health?standbyok=true"
+    # When a probe fails, Kubernetes will try failureThreshold times before giving up
+    #failureThreshold: 2
+    # Number of seconds after the container has started before probe initiates
+    #initialDelaySeconds: 90
+    # How often (in seconds) to perform the probe
+    #periodSeconds: 5
+    # Minimum consecutive successes for the probe to be considered successful after having failed
+    #successThreshold: 1
+    # Number of seconds after which the probe times out.
+    #timeoutSeconds: 3
+
+  # Used to define commands to run after the pod is ready.
+  # This can be used to automate processes such as initialization
+  # or boostrapping auth methods.
+  postStart: []
+  # - /bin/sh
+  # - -c
+  # - /vault/userconfig/myscript/run.sh
+
+  # Affinity Settings
+  # Commenting out or setting as empty the affinity variable, will allow
+  # deployment to single node services such as Minikube
+  # This should be either a multi-line string or YAML matching the PodSpec's affinity field.
+  affinity: ""
+
+
+  # Enables a headless service to be used by the Vault Statefulset
+  service:
+    enabled: true
+    # Enable or disable the vault-active service, which selects Vault pods that
+    # have labelled themselves as the cluster leader with `vault-active: "true"`
+    active:
+      enabled: true
+    # Enable or disable the vault-standby service, which selects Vault pods that
+    # have labelled themselves as a cluster follower with `vault-active: "false"`
+    standby:
+      enabled: true
+    # If enabled, the service selectors will include `app.kubernetes.io/instance: {{ .Release.Name }}`
+    # When disabled, services may select Vault pods not deployed from the chart.
+    # Does not affect the headless vault-internal service with `ClusterIP: None`
+    instanceSelector:
+      enabled: true
+    # clusterIP controls whether a Cluster IP address is attached to the
+    # Vault service within Kubernetes.  By default, the Vault service will
+    # be given a Cluster IP address, set to None to disable.  When disabled
+    # Kubernetes will create a "headless" service.  Headless services can be
+    # used to communicate with pods directly through DNS instead of a round-robin
+    # load balancer.
+    # clusterIP: None
+
+    # Configures the service type for the main Vault service.  Can be ClusterIP
+    # or NodePort.
+    #type: ClusterIP
+
+    # Do not wait for pods to be ready
+    publishNotReadyAddresses: false
+
+    # The externalTrafficPolicy can be set to either Cluster or Local
+    # and is only valid for LoadBalancer and NodePort service types.
+    # The default value is Cluster.
+    # ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
+    externalTrafficPolicy: Cluster
+
+    # If type is set to "NodePort", a specific nodePort value can be configured,
+    # will be random if left blank.
+    #nodePort: 30000
+
+    # When HA mode is enabled
+    # If type is set to "NodePort", a specific nodePort value can be configured,
+    # will be random if left blank.
+    #activeNodePort: 30001
+
+    # When HA mode is enabled
+    # If type is set to "NodePort", a specific nodePort value can be configured,
+    # will be random if left blank.
+    #standbyNodePort: 30002
+
+    # Port on which Vault server is listening
+    port: 8200
+    # Target port to which the service should be mapped to
+    targetPort: 8200
+    # Extra annotations for the service definition. This can either be YAML or a
+    # YAML-formatted multi-line templated string map of the annotations to apply
+    # to the service.
+    annotations: {}
+
+  # This configures the Vault Statefulset to create a PVC for data
+  # storage when using the file or raft backend storage engines.
+  # See https://www.vaultproject.io/docs/configuration/storage/index.html to know more
+  dataStorage:
+    enabled: true
+    # Size of the PVC created
+    size: 10Gi
+    # Location where the PVC will be mounted.
+    mountPath: "/vault/data"
+    # Name of the storage class to use.  If null it will use the
+    # configured default Storage Class.
+    storageClass: null
+    # Access Mode of the storage device being used for the PVC
+    accessMode: ReadWriteOnce
+    # Annotations to apply to the PVC
+    annotations: {}
+
+  # This configures the Vault Statefulset to create a PVC for audit
+  # logs.  Once Vault is deployed, initialized, and unsealed, Vault must
+  # be configured to use this for audit logs.  This will be mounted to
+  # /vault/audit
+  # See https://www.vaultproject.io/docs/audit/index.html to know more
+  auditStorage:
+    enabled: true
+    # Size of the PVC created
+    size: 10Gi
+    # Location where the PVC will be mounted.
+    mountPath: "/vault/audit"
+    # Name of the storage class to use.  If null it will use the
+    # configured default Storage Class.
+    storageClass: null
+    # Access Mode of the storage device being used for the PVC
+    accessMode: ReadWriteOnce
+    # Annotations to apply to the PVC
+    annotations: {}
+
+  
+  # Run Vault in "HA" mode. There are no storage requirements unless the audit log
+  # persistence is required.  In HA mode Vault will configure itself to use Consul
+  # for its storage backend.  The default configuration provided will work the Consul
+  # Helm project by default.  It is possible to manually configure Vault to use a
+  # different HA backend.
+  ha:
+    enabled: true
+    replicas: 3
+
+    # Set the api_addr configuration for Vault HA
+    # See https://www.vaultproject.io/docs/configuration#api_addr
+    # If set to null, this will be set to the Pod IP Address
+    apiAddr: null
+
+    # Set the cluster_addr confuguration for Vault HA
+    # See https://www.vaultproject.io/docs/configuration#cluster_addr
+    # If set to null, this will be set to https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201
+    clusterAddr: null
+
+    # Enables Vault's integrated Raft storage.  Unlike the typical HA modes where
+    # Vault's persistence is external (such as Consul), enabling Raft mode will create
+    # persistent volumes for Vault to store data according to the configuration under server.dataStorage.
+    # The Vault cluster will coordinate leader elections and failovers internally.
+    raft:
+
+      # Enables Raft integrated storage
+      enabled: true
+      # Set the Node Raft ID to the name of the pod
+      setNodeId: true
+
+      # Note: Configuration files are stored in ConfigMaps so sensitive data
+      # such as passwords should be either mounted through extraSecretEnvironmentVars
+      # or through a Kube secret.  For more information see:
+      # https://www.vaultproject.io/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+        }
+
+        service_registration "kubernetes" {}
+
+    # config is a raw string of default configuration when using a Stateful
+    # deployment. Default is to use a Consul for its HA storage backend.
+    # This should be HCL.
+
+    # Note: Configuration files are stored in ConfigMaps so sensitive data
+    # such as passwords should be either mounted through extraSecretEnvironmentVars
+    # or through a Kube secret.  For more information see:
+    # https://www.vaultproject.io/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
+    
+
+    # A disruption budget limits the number of pods of a replicated application
+    # that are down simultaneously from voluntary disruptions
+    disruptionBudget:
+      enabled: true
+
+    # maxUnavailable will default to (n/2)-1 where n is the number of
+    # replicas. If you'd like a custom value, you can specify an override here.
+      maxUnavailable: null
+
+  

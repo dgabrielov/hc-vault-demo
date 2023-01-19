@@ -1,0 +1,28 @@
+#!/bin/bash
+
+project_name=vault-mk
+
+case "$1" in
+    build)
+      minikube start -p="$project_name"
+      minikube tunnel -p="$project_name" &>/dev/null &
+      minikube kubectl -p="$project_name" -- create secret generic vault-ent-license --from-file=./license.hclic
+      terraform init
+      terraform plan
+      terraform apply --auto-approve
+      ;;
+    destroy)
+      terraform destroy --auto-approve
+      pkill -9 -fx "minikube tunnel -p=${project_name}"
+      minikube delete -p="$project_name"
+      find ./tmp/outputs -mindepth 1 ! -name '*.md' -delete
+      find ./tmp/outputs -mindepth 1 ! -name '*.md' -delete
+      ;;
+    *)
+      printf "\n%s" \
+      "Creates/destroys the Vault deployment." \
+      "Usage: $script_name [build | destroy]" \
+      "" \
+      ""
+      ;;
+esac
