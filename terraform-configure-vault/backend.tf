@@ -1,9 +1,9 @@
 terraform {
   cloud {
-    organization = "jaware-hc-demos"
+    organization = "dgtest1"
 
     workspaces {
-      name = "hc-vault-demo-tfconfig"
+      name = "hc-vault-demo"
     }
   }
 }
